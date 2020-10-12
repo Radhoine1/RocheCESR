@@ -67,7 +67,7 @@ Change index:
     Radhoine Jmal           2020-10-09      Roche CESR      cffcRequestCalibrationData  - Add cffcRequestCalibrationData
     Radhoine Jmal           2020-10-09      Roche CESR      cffcStorageLoad             - Add cffcStorageLoad
     Radhoine Jmal           2020-10-12      Roche CESR      cffcSetupConfirmation       - Update cffcSetupConfirmation (Add config parameter)
-    
+    Radhoine Jmal           2020-10-12      Roche CESR      cffcCheckUser               - Update cffcCheckUser: Add unregister user without password  
 */
 
 /* eslint-disable no-undef*/
@@ -404,27 +404,27 @@ function cffcCameraOut(inputArg1, inputArg2, inputArg3, inputArg4, inputArg5, in
 
 function updateUserAttribute(stationNumber,userId,password,tokenID){
   var objectrequestType = 7;
-          var objectNumber = stationNumber;
-          var objectDetail = -1;
-          var bookDate = -1;
-          var allowOverWrite = 1;
-          var attributeUploadKeys = [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE];
-          var attributeUploadValues = ["USER_INFO", userId + "|" + password + "|" + tokenID, 0];
-          var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
-            imsApiSessionContext,
-            stationNumber, // String
-            objectrequestType, // int
-            objectNumber, // String
-            objectDetail, // String
-            bookDate, // long
-            allowOverWrite, // int
-            attributeUploadKeys, // String[]
-            attributeUploadValues // String[]
-          );
-          var return_value = result_attribAppendAttributeValues.return_value;
-          if (return_value != 0) {
-            return generateError(-1002, "Fehler in MES API attribAppendAttributeValues");
-          }
+  var objectNumber = stationNumber;
+  var objectDetail = -1;
+  var bookDate = -1;
+  var allowOverWrite = 1;
+  var attributeUploadKeys = [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE];
+  var attributeUploadValues = ["USER_INFO", userId + "|" + password + "|" + tokenID, 0];
+  var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
+    imsApiSessionContext,
+    stationNumber, // String
+    objectrequestType, // int
+    objectNumber, // String
+    objectDetail, // String
+    bookDate, // long
+    allowOverWrite, // int
+    attributeUploadKeys, // String[]
+    attributeUploadValues // String[]
+  );
+  var return_value = result_attribAppendAttributeValues.return_value;
+  if (return_value != 0) {
+    return generateError(-1002, "Fehler in MES API attribAppendAttributeValues");
+  }
 }
 
 /**
@@ -438,49 +438,45 @@ function updateUserAttribute(stationNumber,userId,password,tokenID){
 // eslint-disable-next-line no-shadow
 function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
   if (prod_cffcCheckUser) {
-    if (!stationNumber || (tokenID == "" && (userId == "" || password == "")) || requestType == "") {
+    if (!stationNumber || !requestType ) {
       // eslint-disable-next-line no-magic-numbers
       return generateReturn(-1001, "invalid input");
     }
-    //Check Login requestType
-
     if (!tokenID) {
-      if (!userId && !password) {
-        return generateReturn(-1001, "invalid input");
-      } else {
-        
-          //mdataGetUserGroupData
-          var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
-          var mdataGetUserGroupDataKeys = new Array("USER_GROUP_NAME");
-          var result_mdataGetUserGroupData = imsApiService.mdataGetUserGroupData(
-            imsApiSessionContext,
-            stationNumber,
-            mdataGetUserGroupDataFilter,
-            mdataGetUserGroupDataKeys
-          );
-          if (result_mdataGetUserGroupData.return_value !== 0) {
-            return generateError(-1002, "Fehler in MES API mdataGetUserGroupData");
-          }
-          var UserGroup = new Array();
-          for (var i = 0; i < result_mdataGetUserGroupData.mdataGetUserGroupDataValues.length; i++) {
-            UserGroup.push(result_mdataGetUserGroupData.mdataGetUserGroupDataValues[i]);
-          }
-          if (requestType == 1) {
-            //regRegisterUser
-            var result_regRegisterUser = imsApiService.regRegisterUser(imsApiSessionContext, stationNumber, userId, password, 01);
-            if (result_regRegisterUser.return_value == -106) {
-              return generateReturn(1, "This user has already logged into the station");
-            }
-            if (result_regRegisterUser.return_value == -107) {
-              return generateReturn(1, "Another user is already logged into the station");
-            }
-            if (result_regRegisterUser.return_value !== 0) {
-              return generateReturn(1, "User/password-combination or token invalid");
-            }
-            //------------------------attribAppendAttributeValues--------------------------
-            updateUserAttribute(stationNumber,userId,password,tokenID);
-          }
+      if (userId && password) {
+        //-----------mdataGetUserGroupData
+        var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
+        var mdataGetUserGroupDataKeys = new Array("USER_GROUP_NAME");
+        var result_mdataGetUserGroupData = imsApiService.mdataGetUserGroupData(
+          imsApiSessionContext,
+          stationNumber,
+          mdataGetUserGroupDataFilter,
+          mdataGetUserGroupDataKeys
+        );
+        if (result_mdataGetUserGroupData.return_value !== 0) {
+          return generateError(-1002, "Fehler in MES API mdataGetUserGroupData");
+        }
+        var UserGroup = new Array();
+        for (var i = 0; i < result_mdataGetUserGroupData.mdataGetUserGroupDataValues.length; i++) {
+          UserGroup.push(result_mdataGetUserGroupData.mdataGetUserGroupDataValues[i]);
+        }
       }
+      if (requestType == 1) {
+        //regRegisterUser
+        var result_regRegisterUser = imsApiService.regRegisterUser(imsApiSessionContext, stationNumber, userId, password, 01);
+        if (result_regRegisterUser.return_value == -106) {
+          return generateReturn(1, "This user has already logged into the station");
+        }
+        if (result_regRegisterUser.return_value == -107) {
+          return generateReturn(1, "Another user is already logged into the station");
+        }
+        if (result_regRegisterUser.return_value !== 0) {
+          return generateReturn(1, "User/password-combination or token invalid");
+        }
+        //------------------------attribAppendAttributeValues--------------------------
+        updateUserAttribute(stationNumber,userId,password,tokenID);
+      }
+      
     } else {
       //mdataGetUserData
       var mdataGetUserDataFilter = new Array(new KeyValue("USER_TOKEN", tokenID));
@@ -552,7 +548,7 @@ function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
             return generateReturn(1, "User/password-combination or token invalid");
           }
           //------------------------attribAppendAttributeValues--------------------------
-          updateUserAttribute(stationNumber,userId,password,tokenID);
+          updateUserAttribute(stationNumber,"","",tokenID);
         }
       }
     }
@@ -582,10 +578,9 @@ function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
 
       userName = userInfo.split("|")[0];
       password = userInfo.split("|")[1];
-      tokenID = userInfo.split("|")[2];
-
-      if (tokenID != "") {
-         userName = "-1";
+      tokenID= userInfo.split("|")[2];
+      if (tokenID != "null") {
+         userName = "";
          password = tokenID;
       }
       //--------------------regUnregisterUser--------------------
@@ -594,11 +589,9 @@ function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
         userName,                           // --> String
         password,                           // --> String
         "01"                              // --> String
-        );
+      );
     
       var return_value = result_regUnregisterUser.return_value;
-
-
       if (return_value == -104) {
         return generateReturn(1, "No user has logged into the station");
       }
@@ -1914,7 +1907,7 @@ function cffcMachineIn(stationNumber, serialNumber) {
       return generateError(errorCode, "attribGetAttributeValues");
     }
 
-    attribValue = result_attribGetAttributeValues.attributeResultValues[1];
+    attribValue = String(result_attribGetAttributeValues.attributeResultValues[1]);
     /*
       var result_mlGetStorageData = imsApiService.mlGetStorageData(
           imsApiSessionContext,
