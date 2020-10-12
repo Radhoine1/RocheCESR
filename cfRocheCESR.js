@@ -294,19 +294,7 @@ function dateMsToStr(milliseconds) {
   var hour = parseInt(date.getHours());
   var minute = parseInt(date.getMinutes());
   var second = parseInt(date.getSeconds());
-  var a =
-    "" +
-    year.toString() +
-    "-" +
-    month.toString() +
-    "-" +
-    day.toString() +
-    " " +
-    hour.toString() +
-    ":" +
-    minute.toString() +
-    ":" +
-    second.toString();
+  var a = "" + year.toString() + "-" + month.toString() + "-" + day.toString() + " " + hour.toString() + ":" + minute.toString() + ":" + second.toString();
 
   return a;
 }
@@ -349,14 +337,7 @@ function cffcCameraOut(inputArg1, inputArg2, inputArg3, inputArg4, inputArg5, in
     var cycleTime = inputs.CT;
     var result = inputs.RC;
 
-    if (
-      !stationNumber ||
-      !serialNumber ||
-      !pictureNumber ||
-      !processName ||
-      (linkGlobal && linkLocal) ||
-      (!linkGlobal && !linkLocal)
-    ) {
+    if (!stationNumber || !serialNumber || !pictureNumber || !processName || (linkGlobal && linkLocal) || (!linkGlobal && !linkLocal)) {
       // eslint-disable-next-line no-magic-numbers
       return generateReturn(-1001, "Fehlerhafte Daten an das MES übertragen");
     }
@@ -391,30 +372,8 @@ function cffcCameraOut(inputArg1, inputArg2, inputArg3, inputArg4, inputArg5, in
     var duplicateSerialNumber = 0;
     var bookDate = -1;
     var recipeVersionMode = -1;
-    var resultUploadKeys = [
-      ImsApiKey.ERROR_CODE,
-      ImsApiKey.MEASURE_FAIL_CODE,
-      ImsApiKey.MEASURE_NAME,
-      ImsApiKey.MEASURE_VALUE,
-      ImsApiKey.UNIT,
-    ];
-    var resultUploadValues = [
-      0,
-      0,
-      "processName",
-      processName,
-      "",
-      0,
-      0,
-      "pictureNumber",
-      pictureNumber,
-      "",
-      0,
-      0,
-      "result",
-      result,
-      "",
-    ];
+    var resultUploadKeys = [ImsApiKey.ERROR_CODE, ImsApiKey.MEASURE_FAIL_CODE, ImsApiKey.MEASURE_NAME, ImsApiKey.MEASURE_VALUE, ImsApiKey.UNIT];
+    var resultUploadValues = [0, 0, "processName", processName, "", 0, 0, "pictureNumber", pictureNumber, "", 0, 0, "result", result, ""];
 
     var result_trUploadResultDataAndRecipe = imsApiService.trUploadResultDataAndRecipe(
       imsApiSessionContext,
@@ -442,66 +401,9 @@ function cffcCameraOut(inputArg1, inputArg2, inputArg3, inputArg4, inputArg5, in
   }
 }
 
-/**
- * @param {string} inputArg1 - stationNumber
- * @param {string} inputArg2 - requestType
- * @param {string} inputArg3 - tokenID
- * @param {string} inputArg4 - userId
- * @param {string} inputArg5 - password
- * @returns {Result_customFunctionCommon}
- */
-// eslint-disable-next-line no-shadow
-function cffcCheckUser(stationNumber, requestType, tokenID, userId, password) {
-  if (prod_cffcCheckUser) {
-    // if(!stationNumber || !requestType){
-    //   return generateReturn(-1001, "invalid input")
-    // }
-    if (!stationNumber || (tokenID == "" && (userId == "" || password == "")) || requestType == "") {
-      // eslint-disable-next-line no-magic-numbers
-      return generateReturn(-1001, "invalid input");
-    }
-    //Check Login requestType
-    if (requestType == 1) {
-      if (!tokenID) {
-        if (!userId && !password) {
-          return generateReturn(-1001, "invalid input");
-        } else {
-          //mdataGetUserGroupData
-          var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
-          var mdataGetUserGroupDataKeys = new Array("USER_GROUP_NAME");
-          var result_mdataGetUserGroupData = imsApiService.mdataGetUserGroupData(
-            imsApiSessionContext,
-            stationNumber,
-            mdataGetUserGroupDataFilter,
-            mdataGetUserGroupDataKeys
-          );
-          if (result_mdataGetUserGroupData.return_value !== 0) {
-            return generateError(-1002, "Fehler in MES API mdataGetUserGroupData");
-          }
-          var UserGroup = new Array();
-          for (var i = 0; i < result_mdataGetUserGroupData.mdataGetUserGroupDataValues.length; i++) {
-            UserGroup.push(result_mdataGetUserGroupData.mdataGetUserGroupDataValues[i]);
-          }
 
-          //regRegisterUser
-          var result_regRegisterUser = imsApiService.regRegisterUser(
-            imsApiSessionContext,
-            stationNumber,
-            userId,
-            password,
-            01
-          );
-          if (result_regRegisterUser.return_value == -106) {
-            return generateReturn(1, "This user has already logged into the station");
-          }
-          if (result_regRegisterUser.return_value == -107) {
-            return generateReturn(1, "Another user is already logged into the station");
-          }
-          if (result_regRegisterUser.return_value !== 0) {
-            return generateReturn(1, "User/password-combination or token invalid");
-          }
-          //------------------------attribAppendAttributeValues--------------------------
-          var objectrequestType = 7;
+function updateUserAttribute(stationNumber,userId,password,tokenID){
+  var objectrequestType = 7;
           var objectNumber = stationNumber;
           var objectDetail = -1;
           var bookDate = -1;
@@ -523,44 +425,49 @@ function cffcCheckUser(stationNumber, requestType, tokenID, userId, password) {
           if (return_value != 0) {
             return generateError(-1002, "Fehler in MES API attribAppendAttributeValues");
           }
-        }
-      } else {
-        //mdataGetUserData
-        var mdataGetUserDataFilter = new Array(new KeyValue("USER_TOKEN", tokenID));
-        var mdataGetUserDataKeys = new Array("USER_NAME");
-        var result_mdataGetUserData = imsApiService.mdataGetUserData(
-          imsApiSessionContext,
-          stationNumber,
-          mdataGetUserDataFilter,
-          mdataGetUserDataKeys
-        );
-        if (result_mdataGetUserData.return_value !== 0) {
-          if (userId && password) {
-            //mdataGetUserGroupData
-            var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
-            var mdataGetUserGroupDataKeys = new Array("USER_GROUP_NAME");
-            var result_mdataGetUserGroupData = imsApiService.mdataGetUserGroupData(
-              imsApiSessionContext,
-              stationNumber,
-              mdataGetUserGroupDataFilter,
-              mdataGetUserGroupDataKeys
-            );
-            if (result_mdataGetUserGroupData.return_value !== 0) {
-              return generateError(-1002, "Fehler in MES API mdataGetUserGroupData");
-            }
-            var UserGroup = new Array();
-            for (var i = 0; i < result_mdataGetUserGroupData.mdataGetUserGroupDataValues.length; i++) {
-              UserGroup.push(result_mdataGetUserGroupData.mdataGetUserGroupDataValues[i]);
-            }
+}
 
+/**
+ * @param {string} inputArg1 - stationNumber
+ * @param {string} inputArg2 - tokenID
+ * @param {string} inputArg3 - userId
+ * @param {string} inputArg4 - password
+ * @param {string} inputArg5 - requestType
+ * @returns {Result_customFunctionCommon}
+ */
+// eslint-disable-next-line no-shadow
+function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
+  if (prod_cffcCheckUser) {
+    if (!stationNumber || (tokenID == "" && (userId == "" || password == "")) || requestType == "") {
+      // eslint-disable-next-line no-magic-numbers
+      return generateReturn(-1001, "invalid input");
+    }
+    //Check Login requestType
+
+    if (!tokenID) {
+      if (!userId && !password) {
+        return generateReturn(-1001, "invalid input");
+      } else {
+        
+          //mdataGetUserGroupData
+          var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
+          var mdataGetUserGroupDataKeys = new Array("USER_GROUP_NAME");
+          var result_mdataGetUserGroupData = imsApiService.mdataGetUserGroupData(
+            imsApiSessionContext,
+            stationNumber,
+            mdataGetUserGroupDataFilter,
+            mdataGetUserGroupDataKeys
+          );
+          if (result_mdataGetUserGroupData.return_value !== 0) {
+            return generateError(-1002, "Fehler in MES API mdataGetUserGroupData");
+          }
+          var UserGroup = new Array();
+          for (var i = 0; i < result_mdataGetUserGroupData.mdataGetUserGroupDataValues.length; i++) {
+            UserGroup.push(result_mdataGetUserGroupData.mdataGetUserGroupDataValues[i]);
+          }
+          if (requestType == 1) {
             //regRegisterUser
-            var result_regRegisterUser = imsApiService.regRegisterUser(
-              imsApiSessionContext,
-              stationNumber,
-              userId,
-              password,
-              01
-            );
+            var result_regRegisterUser = imsApiService.regRegisterUser(imsApiSessionContext, stationNumber, userId, password, 01);
             if (result_regRegisterUser.return_value == -106) {
               return generateReturn(1, "This user has already logged into the station");
             }
@@ -571,33 +478,16 @@ function cffcCheckUser(stationNumber, requestType, tokenID, userId, password) {
               return generateReturn(1, "User/password-combination or token invalid");
             }
             //------------------------attribAppendAttributeValues--------------------------
-            var objectrequestType = 7;
-            var objectNumber = stationNumber;
-            var objectDetail = -1;
-            var bookDate = -1;
-            var allowOverWrite = 1;
-            var attributeUploadKeys = [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE];
-            var attributeUploadValues = ["USER_INFO", userId + "|" + password + "|" + tokenID, 0];
-            var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
-              imsApiSessionContext,
-              stationNumber, // String
-              objectrequestType, // int
-              objectNumber, // String
-              objectDetail, // String
-              bookDate, // long
-              allowOverWrite, // int
-              attributeUploadKeys, // String[]
-              attributeUploadValues // String[]
-            );
-            var return_value = result_attribAppendAttributeValues.return_value;
-            if (return_value != 0) {
-              return generateError(-1002, "Fehler in MES API attribAppendAttributeValues");
-            }
-          } else {
-            return generateReturn(1, "User/password-combination or token invalid");
+            updateUserAttribute(stationNumber,userId,password,tokenID);
           }
-        } else {
-          var userId = result_mdataGetUserData.mdataGetUserDataValues[0];
+      }
+    } else {
+      //mdataGetUserData
+      var mdataGetUserDataFilter = new Array(new KeyValue("USER_TOKEN", tokenID));
+      var mdataGetUserDataKeys = new Array("USER_NAME");
+      var result_mdataGetUserData = imsApiService.mdataGetUserData(imsApiSessionContext, stationNumber, mdataGetUserDataFilter, mdataGetUserDataKeys);
+      if (result_mdataGetUserData.return_value !== 0) {
+        if (userId && password) {
           //mdataGetUserGroupData
           var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
           var mdataGetUserGroupDataKeys = new Array("USER_GROUP_NAME");
@@ -614,14 +504,44 @@ function cffcCheckUser(stationNumber, requestType, tokenID, userId, password) {
           for (var i = 0; i < result_mdataGetUserGroupData.mdataGetUserGroupDataValues.length; i++) {
             UserGroup.push(result_mdataGetUserGroupData.mdataGetUserGroupDataValues[i]);
           }
-
-          var result_regRegisterUser = imsApiService.regRegisterUser(
-            imsApiSessionContext,
-            stationNumber,
-            null,
-            tokenID,
-            01
-          );
+          if(requestType == 1){
+            //regRegisterUser
+            var result_regRegisterUser = imsApiService.regRegisterUser(imsApiSessionContext, stationNumber, userId, password, 01);
+            if (result_regRegisterUser.return_value == -106) {
+              return generateReturn(1, "This user has already logged into the station");
+            }
+            if (result_regRegisterUser.return_value == -107) {
+              return generateReturn(1, "Another user is already logged into the station");
+            }
+            if (result_regRegisterUser.return_value !== 0) {
+              return generateReturn(1, "User/password-combination or token invalid");
+            }
+            //------------------------attribAppendAttributeValues--------------------------
+            updateUserAttribute(stationNumber,userId,password,tokenID);
+          }
+        } else {
+          return generateReturn(1, "User/password-combination or token invalid");
+        }
+      } else {
+        var userId = result_mdataGetUserData.mdataGetUserDataValues[0];
+        //mdataGetUserGroupData
+        var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
+        var mdataGetUserGroupDataKeys = new Array("USER_GROUP_NAME");
+        var result_mdataGetUserGroupData = imsApiService.mdataGetUserGroupData(
+          imsApiSessionContext,
+          stationNumber,
+          mdataGetUserGroupDataFilter,
+          mdataGetUserGroupDataKeys
+        );
+        if (result_mdataGetUserGroupData.return_value !== 0) {
+          return generateError(-1002, "Fehler in MES API mdataGetUserGroupData");
+        }
+        var UserGroup = new Array();
+        for (var i = 0; i < result_mdataGetUserGroupData.mdataGetUserGroupDataValues.length; i++) {
+          UserGroup.push(result_mdataGetUserGroupData.mdataGetUserGroupDataValues[i]);
+        }
+        if(requestType == 1){
+          var result_regRegisterUser = imsApiService.regRegisterUser(imsApiSessionContext, stationNumber, null, tokenID, 01);
           if (result_regRegisterUser.return_value == -106) {
             return generateReturn(1, "This user has already logged into the station");
           }
@@ -632,32 +552,11 @@ function cffcCheckUser(stationNumber, requestType, tokenID, userId, password) {
             return generateReturn(1, "User/password-combination or token invalid");
           }
           //------------------------attribAppendAttributeValues--------------------------
-          var objectrequestType = 7;
-          var objectNumber = stationNumber;
-          var objectDetail = -1;
-          var bookDate = -1;
-          var allowOverWrite = 1;
-          var attributeUploadKeys = [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE];
-          var attributeUploadValues = ["USER_INFO", userId + "|" + password + "|" + tokenID, 0];
-          var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
-            imsApiSessionContext,
-            stationNumber, // String
-            objectrequestType, // int
-            objectNumber, // String
-            objectDetail, // String
-            bookDate, // long
-            allowOverWrite, // int
-            attributeUploadKeys, // String[]
-            attributeUploadValues // String[]
-          );
-          var return_value = result_attribAppendAttributeValues.return_value;
-          if (return_value != 0) {
-            return generateError(-1002, "Fehler in MES API attribAppendAttributeValues");
-          }
+          updateUserAttribute(stationNumber,userId,password,tokenID);
         }
       }
-      return generateReturn(0, "", [userId, UserGroup[0]]);
     }
+
     if (requestType == 0) {
       var objectrequestType = 7;
       var objectNumber = stationNumber;
@@ -679,53 +578,42 @@ function cffcCheckUser(stationNumber, requestType, tokenID, userId, password) {
       if (return_value != 0) {
         return generateError(-1002, "Fehler in MES API attribGetAttributeValues");
       }
-      var slpt = "" + result_attribGetAttributeValues.attributeResultValues[1];
-      logHandler.logMessage("result_attribGetAttributeValues: " + slpt);
-      slpt = slpt.split("|");
-      logHandler.logMessage("result_attribGetAttributeValues: " + slpt);
-      userId = slpt[0];
-      password = slpt[1];
-      tokenID = slpt[2];
-      logHandler.logMessage("0: " + slpt[0]);
-      logHandler.logMessage("1: " + slpt[1]);
-      logHandler.logMessage("2: " + slpt[2]);
+      var userInfo = "" + result_attribGetAttributeValues.attributeResultValues[1];
+
+      userName = userInfo.split("|")[0];
+      password = userInfo.split("|")[1];
+      tokenID = userInfo.split("|")[2];
+
+      if (tokenID != "") {
+         userName = "-1";
+         password = tokenID;
+      }
       //--------------------regUnregisterUser--------------------
-      var result_regUnregisterUser = imsApiService.regUnregisterUser(
-        imsApiSessionContext,
-        stationNumber,
-        null,
-        tokenID,
-        01
-      );
-      if (result_regUnregisterUser.return_value == -104) {
+      var result_regUnregisterUser =  imsApiService.regUnregisterUser(imsApiSessionContext,
+        stationNumber,                      // --> String
+        userName,                           // --> String
+        password,                           // --> String
+        "01"                              // --> String
+        );
+    
+      var return_value = result_regUnregisterUser.return_value;
+
+
+      if (return_value == -104) {
         return generateReturn(1, "No user has logged into the station");
       }
-      if (result_regUnregisterUser.return_value == -107) {
+      if (return_value == -107) {
         return generateReturn(1, "Another user is already logged into the station");
       }
-      if (result_regUnregisterUser.return_value !== 0) {
+      if (return_value !== 0) {
         return generateReturn(1, "User/password-combination or token invalid");
       }
-      var objectType = 7;
-      var objectNumber = stationNumber;
-      var objectDetail = -1;
-      var attributeCode = "USER_INFO";
-      var attributeValueKey = -1;
-      var result_attribRemoveAttributeValue = imsApiService.attribRemoveAttributeValue(
-        imsApiSessionContext,
-        stationNumber, // String
-        objectType, // int
-        objectNumber, // String
-        objectDetail, // String
-        attributeCode, // String
-        attributeValueKey // String
-      );
-      var return_value = result_attribRemoveAttributeValue.return_value;
-      if (return_value != 0) {
-        return generateError(-1002, "Fehler in MES API attribRemoveAttributeValue");
-      }
-      return generateReturn(0, "");
+      
+      updateUserAttribute(stationNumber,"","","");
+      userId = userName;
+      UserGroup = [];
     }
+    return generateReturn(0, "", [userId, UserGroup[0]]);
   } else {
     return generateReturn(0, "", ["userID", "userGroup"]);
   }
@@ -910,24 +798,7 @@ function cffcGetSerialNumber(inputArg1, inputArg2) {
       return generateReturn(-1001, e.toString());
     }
   } else {
-    return generateReturn(0, "", [
-      [
-        "snr01",
-        "snr02",
-        "snr03",
-        "snr04",
-        "snr05",
-        "snr06",
-        "snr07",
-        "snr08",
-        "snr09",
-        "snr10",
-        "snr11",
-        "snr12",
-        "snr13",
-      ],
-      13,
-    ]);
+    return generateReturn(0, "", [["snr01", "snr02", "snr03", "snr04", "snr05", "snr06", "snr07", "snr08", "snr09", "snr10", "snr11", "snr12", "snr13"], 13]);
   }
 
   return generateReturn(0, "", [serialNumbersOut, amount]);
@@ -991,26 +862,9 @@ function cffcIEOut(inputArg1, inputArg2, inputArg3, inputArg4, inputArg5, inputA
     var duplicateSerialNumber = 0;
     var bookDate = -1;
     var recipeVersionMode = -1;
-    var resultUploadKeys = [
-      ImsApiKey.ERROR_CODE,
-      ImsApiKey.MEASURE_FAIL_CODE,
-      ImsApiKey.MEASURE_NAME,
-      ImsApiKey.MEASURE_VALUE,
-      ImsApiKey.UNIT,
-    ];
+    var resultUploadKeys = [ImsApiKey.ERROR_CODE, ImsApiKey.MEASURE_FAIL_CODE, ImsApiKey.MEASURE_NAME, ImsApiKey.MEASURE_VALUE, ImsApiKey.UNIT];
     // single entries (PNA, RP --> Mandatory)
-    var resultUploadValues = [
-      0,
-      0,
-      "processName",
-      processName,
-      "",
-      0,
-      0,
-      "reportedPlateAmount",
-      reportedPlateAmount,
-      "",
-    ];
+    var resultUploadValues = [0, 0, "processName", processName, "", 0, 0, "reportedPlateAmount", reportedPlateAmount, ""];
     // multiple entries (MV --> Optional)
     if (Array.isArray(measurementValue)) {
       for (var i = 0; i < measurementValue.length; i++) {
@@ -1087,28 +941,17 @@ function cffcLoadChamberConfirmation(stationNumber, serialNumber, position, load
     if (result_mlUpdateStorage.return_value !== 0) {
       return generateError(result_mlUpdateStorage.return_value, "mlUpdateStorage");
     }
-    var result_trGetSerialNumberInfo = imsApiService.trGetSerialNumberInfo(
-      imsApiSessionContext,
-      stationNumber,
-      serialNumber,
-      "-1",
-      [ImsApiKey.WORKORDER_NUMBER]
-    );
+    var result_trGetSerialNumberInfo = imsApiService.trGetSerialNumberInfo(imsApiSessionContext, stationNumber, serialNumber, "-1", [
+      ImsApiKey.WORKORDER_NUMBER,
+    ]);
     if (result_trGetSerialNumberInfo.return_value !== 0) {
       return generateError(result_mlUpdateStorage.return_value, "result_trGetSerialNumberInfo");
     }
     var workorderNumber = String(result_trGetSerialNumberInfo.serialNumberResultValues[0]);
     if (workorderNumber !== "TEMP_SENSOREN") {
-      var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(
-        imsApiSessionContext,
-        stationNumber,
-        serialNumber,
-        "-1",
-        0,
-        0,
-        1,
-        [ImsApiKey.WORKSTEP_AVO]
-      );
+      var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(imsApiSessionContext, stationNumber, serialNumber, "-1", 0, 0, 1, [
+        ImsApiKey.WORKSTEP_AVO,
+      ]);
       if (result_trGetNextProductionStep.return_value !== 0) {
         return generateError(result_trGetNextProductionStep.return_value, "trGetNextProductionStep");
       }
@@ -1331,11 +1174,7 @@ function cffcLoadUnloadPlates(stationNumber, magazineNumber, direction, serialNu
         }
         //-------------------mdataGetCalendarData------------------------
         var calendarDataResultKeys = ["CURRENT_TIME_MILLIS"];
-        var result_mdataGetCalendarData = imsApiService.mdataGetCalendarData(
-          imsApiSessionContext,
-          stationNumber,
-          calendarDataResultKeys
-        );
+        var result_mdataGetCalendarData = imsApiService.mdataGetCalendarData(imsApiSessionContext, stationNumber, calendarDataResultKeys);
         if (result_mdataGetCalendarData.return_value !== 0) {
           return generateError(result_mdataGetCalendarData.return_value, "mdataGetCalendarData");
         }
@@ -1474,11 +1313,7 @@ function cffcLoadUnloadPlates(stationNumber, magazineNumber, direction, serialNu
         }
         //-------------------mdataGetCalendarData------------------------
         var calendarDataResultKeys = ["CURRENT_TIME_MILLIS"];
-        var result_mdataGetCalendarData = imsApiService.mdataGetCalendarData(
-          imsApiSessionContext,
-          stationNumber,
-          calendarDataResultKeys
-        );
+        var result_mdataGetCalendarData = imsApiService.mdataGetCalendarData(imsApiSessionContext, stationNumber, calendarDataResultKeys);
         if (result_mdataGetCalendarData.return_value !== 0) {
           return generateError(result_mdataGetCalendarData.return_value, "mdataGetCalendarData");
         }
@@ -1895,15 +1730,11 @@ function cffcMachineIn(stationNumber, serialNumber) {
     var processLayer = Number(result_trGetStationSetting.stationSettingResultValues[2]);
     var processName = result_trGetStationSetting.stationSettingResultValues[3];
 
-    var result_trCheckSerialNumberState = imsApiService.trCheckSerialNumberState(
-      imsApiSessionContext,
-      stationNumber,
-      processLayer,
-      2,
-      serialNumber,
-      "-1",
-      [ImsApiKey.BOOKING_VALID, ImsApiKey.ERROR_CODE, ImsApiKey.IN_PROCESS]
-    );
+    var result_trCheckSerialNumberState = imsApiService.trCheckSerialNumberState(imsApiSessionContext, stationNumber, processLayer, 2, serialNumber, "-1", [
+      ImsApiKey.BOOKING_VALID,
+      ImsApiKey.ERROR_CODE,
+      ImsApiKey.IN_PROCESS,
+    ]);
 
     if (result_trCheckSerialNumberState.return_value == 240) {
       return generateReturn(1, "ErrorMessage:forward plate without processing");
@@ -1913,13 +1744,9 @@ function cffcMachineIn(stationNumber, serialNumber) {
       return generateError(result_trCheckSerialNumberState.return_value, "trCheckSerialNumberState");
     }
 
-    var result_trGetSerialNumberInfo = imsApiService.trGetSerialNumberInfo(
-      imsApiSessionContext,
-      stationNumber,
-      serialNumber,
-      "-1",
-      [ImsApiKey.WORKORDER_NUMBER]
-    );
+    var result_trGetSerialNumberInfo = imsApiService.trGetSerialNumberInfo(imsApiSessionContext, stationNumber, serialNumber, "-1", [
+      ImsApiKey.WORKORDER_NUMBER,
+    ]);
 
     if (result_trGetSerialNumberInfo.return_value !== 0) {
       return generateError(result_mlUpdateStorage.return_value, "result_trGetSerialNumberInfo");
@@ -1950,31 +1777,17 @@ function cffcMachineIn(stationNumber, serialNumber) {
       return generateError(result_trUploadState.return_value, "trUploadState");
     }
 
-    var result_setupCheck = imsApiService.setupCheck(
-      imsApiSessionContext,
-      stationNumber,
-      serialNumber,
-      "-1",
-      "-1",
-      processLayer,
-      1,
-      0
-    );
+    var result_setupCheck = imsApiService.setupCheck(imsApiSessionContext, stationNumber, serialNumber, "-1", "-1", processLayer, 1, 0);
 
     if (result_setupCheck.return_value != 0 && result_setupCheck.return_value != 604) {
       return generateReturn(-1, "ErrorMessage: “Setup is not valid”");
     }
 
-    var result_equCheckEquipmentData = imsApiService.equCheckEquipmentData(
-      imsApiSessionContext,
-      stationNumber,
-      "-1",
-      "-1",
-      "-1",
-      processLayer,
-      1,
-      [ImsApiKey.EQUIPMENT_NUMBER, ImsApiKey.EQUIPMENT_STATE, ImsApiKey.EQUIPMENT_CHECKSTATE]
-    );
+    var result_equCheckEquipmentData = imsApiService.equCheckEquipmentData(imsApiSessionContext, stationNumber, "-1", "-1", "-1", processLayer, 1, [
+      ImsApiKey.EQUIPMENT_NUMBER,
+      ImsApiKey.EQUIPMENT_STATE,
+      ImsApiKey.EQUIPMENT_CHECKSTATE,
+    ]);
 
     if (result_equCheckEquipmentData.return_value == -2) {
       return generateReturn(-2, "ErrorMessage: “Setup equipement is not valid”");
@@ -2061,27 +1874,18 @@ function cffcMachineIn(stationNumber, serialNumber) {
     );
 
     if (result_trGetSerialNumberForWorkOrderAndWorkstep.return_value != 0) {
-      return generateError(
-        result_trGetSerialNumberForWorkOrderAndWorkstep.return_value,
-        "trGetSerialNumberForWorkOrderAndWorkstep"
-      );
+      return generateError(result_trGetSerialNumberForWorkOrderAndWorkstep.return_value, "trGetSerialNumberForWorkOrderAndWorkstep");
     }
 
     var firstPlate = result_trGetSerialNumberForWorkOrderAndWorkstep.serialNumberResultValues[0];
     firstPlate = Math.round(firstPlate / 1000);
     var actualPlate = firstPlate;
 
-    var lastPlate = Math.round(
-      (cycleTime * (result_trGetSerialNumberForWorkOrderAndWorkstep.serialNumberResultValues.length / 3)) / 1000
-    );
+    var lastPlate = Math.round((cycleTime * (result_trGetSerialNumberForWorkOrderAndWorkstep.serialNumberResultValues.length / 3)) / 1000);
 
-    var result_shipGetLotFromSerialNumber = imsApiService.shipGetLotFromSerialNumber(
-      imsApiSessionContext,
-      stationNumber,
-      serialNumber,
-      "-1",
-      ["SHIPPING_LOT_NUMBER"]
-    );
+    var result_shipGetLotFromSerialNumber = imsApiService.shipGetLotFromSerialNumber(imsApiSessionContext, stationNumber, serialNumber, "-1", [
+      "SHIPPING_LOT_NUMBER",
+    ]);
 
     if (result_shipGetLotFromSerialNumber.return_value != 0) {
       return generateError(result_shipGetLotFromSerialNumber.return_value, "shipGetLotFromSerialNumber");
@@ -2169,11 +1973,7 @@ function cffcMachineIn(stationNumber, serialNumber) {
       ["NOMINAL"]
     );
 
-    if (
-      result_mdaGetRecipeData.return_value != 0 &&
-      result_mdaGetRecipeData.return_value != -701 &&
-      result_mdaGetRecipeData.return_value != -706
-    ) {
+    if (result_mdaGetRecipeData.return_value != 0 && result_mdaGetRecipeData.return_value != -701 && result_mdaGetRecipeData.return_value != -706) {
       return generateReturn(1, "ErrorMessage:“invalid recipe data”");
     }
 
@@ -2263,16 +2063,7 @@ function cffcMachineIn(stationNumber, serialNumber) {
  * @param {string} inputArg8 - information
  * @returns {Result_customFunctionCommon}
  */
-function cffcMachineOut(
-  stationNumber,
-  serialNumber,
-  serialNumberAndResult,
-  slodID,
-  cycleTime,
-  failCode,
-  measurementData,
-  information
-) {
+function cffcMachineOut(stationNumber, serialNumber, serialNumberAndResult, slodID, cycleTime, failCode, measurementData, information) {
   if (prod_cffcMachineOut) {
     // TODO: implement after specification is ready
 
@@ -2312,10 +2103,7 @@ function cffcMachineOut(
       );
 
       if ([0, -206, -205].indexOf(result_trAssignSerialNumberForProductOrWorkOrder.return_value) == -1) {
-        return generateError(
-          result_trAssignSerialNumberForProductOrWorkOrder.return_value,
-          "trAssignSerialNumberForProductOrWorkOrder"
-        );
+        return generateError(result_trAssignSerialNumberForProductOrWorkOrder.return_value, "trAssignSerialNumberForProductOrWorkOrder");
       }
     } else {
       logHandler.logMessage("station should not assign SN.");
@@ -2349,15 +2137,9 @@ function cffcMachineOut(
     }
 
     if ((cycleTime == 0 || cycleTime == "-1") && !isAllowedStation(stationNumber, "STATION_TYPE", "KLS")) {
-      var result_trGetSerialNumberUploadInfo = imsApiService.trGetSerialNumberUploadInfo(
-        imsApiSessionContext,
-        stationNumber,
-        -1,
-        serialNumber,
-        "-1",
-        0,
-        [ImsApiKey.BOOK_DATE]
-      );
+      var result_trGetSerialNumberUploadInfo = imsApiService.trGetSerialNumberUploadInfo(imsApiSessionContext, stationNumber, -1, serialNumber, "-1", 0, [
+        ImsApiKey.BOOK_DATE,
+      ]);
 
       if (result_trGetSerialNumberUploadInfo.return_value !== 0) {
         return generateError(result_trGetSerialNumberUploadInfo.return_value, "trGetSerialNumberUploadInfo");
@@ -2371,9 +2153,7 @@ function cffcMachineOut(
         return generateReturn(-1002, "Serial Number is not booked on previous station");
       }
 
-      var result_mdataGetCalendarData = imsApiService.mdataGetCalendarData(imsApiSessionContext, stationNumber, [
-        "CURRENT_TIME_MILLIS",
-      ]);
+      var result_mdataGetCalendarData = imsApiService.mdataGetCalendarData(imsApiSessionContext, stationNumber, ["CURRENT_TIME_MILLIS"]);
 
       if (result_mdataGetCalendarData.return_value !== 0) {
         return generateError(result_mdataGetCalendarData.return_value, "mdataGetCalendarData");
@@ -2523,21 +2303,13 @@ function cffcMachineOut(
 }
 
 function isAllowedStation(stationNumber, code, value) {
-  var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
-    imsApiSessionContext,
-    stationNumber,
-    7,
-    stationNumber,
-    "-1",
-    [code],
-    0,
-    ["ATTRIBUTE_CODE", "ATTRIBUTE_VALUE", "ERROR_CODE"]
-  );
+  var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(imsApiSessionContext, stationNumber, 7, stationNumber, "-1", [code], 0, [
+    "ATTRIBUTE_CODE",
+    "ATTRIBUTE_VALUE",
+    "ERROR_CODE",
+  ]);
 
-  if (
-    result_attribGetAttributeValues.return_value == 0 &&
-    String(result_attribGetAttributeValues.attributeResultValues[1]) == String(value)
-  ) {
+  if (result_attribGetAttributeValues.return_value == 0 && String(result_attribGetAttributeValues.attributeResultValues[1]) == String(value)) {
     return true;
   }
 
@@ -2720,22 +2492,12 @@ function cffcSetupConfirmation(stationNumber, successful, partChamber) {
     );
 
     if (result_attribGetAttributeValues.return_value !== 0 || partChamber == "" || !partChamber) {
-      result_attribAppendAttributeValues = attribAppendAttribute(
-        stationNumber,
-        "KAMMER1_GERUESTET",
-        "STATION_GERUESTET",
-        successful
-      );
+      result_attribAppendAttributeValues = attribAppendAttribute(stationNumber, "KAMMER1_GERUESTET", "STATION_GERUESTET", successful);
 
       if (result_attribAppendAttributeValues.return_value !== 0) {
         return generateReturn(-1002, "Fehlerhafte Daten an das MES übertragen");
       }
-      result_attribAppendAttributeValues = attribAppendAttribute(
-        stationNumber,
-        "KAMMER2_GERUESTET",
-        "STATION_GERUESTET",
-        successful
-      );
+      result_attribAppendAttributeValues = attribAppendAttribute(stationNumber, "KAMMER2_GERUESTET", "STATION_GERUESTET", successful);
 
       if (result_attribAppendAttributeValues.return_value !== 0) {
         return generateReturn(-1002, "Fehlerhafte Daten an das MES übertragen");
@@ -2753,12 +2515,7 @@ function cffcSetupConfirmation(stationNumber, successful, partChamber) {
 
     if (partChamber === "1") {
       if (kammer2 == "true") {
-        result_attribAppendAttributeValues = attribAppendAttribute(
-          stationNumber,
-          tempVar,
-          "STATION_GERUESTET",
-          successful
-        );
+        result_attribAppendAttributeValues = attribAppendAttribute(stationNumber, tempVar, "STATION_GERUESTET", successful);
 
         if (result_attribAppendAttributeValues.return_value !== 0) {
           return generateReturn(-1002, "Fehlerhafte Daten an das MES übertragen");
@@ -2767,12 +2524,7 @@ function cffcSetupConfirmation(stationNumber, successful, partChamber) {
       return generateReturn(0, "");
     }
     if (kammer1 == "true") {
-      result_attribAppendAttributeValues = attribAppendAttribute(
-        stationNumber,
-        tempVar,
-        "STATION_GERUESTET",
-        successful
-      );
+      result_attribAppendAttributeValues = attribAppendAttribute(stationNumber, tempVar, "STATION_GERUESTET", successful);
 
       if (result_attribAppendAttributeValues.return_value !== 0) {
         return generateReturn(-1002, "Fehlerhafte Daten an das MES übertragen");
@@ -2824,11 +2576,7 @@ function updateConfigForWayDecision(stationNumber, stationState) {
       //val[1]= 1;  // Station not available
       result_configGetValues.resultValues[i * 2 + 1] = val[0] + val[1] + "|" + stationState;
     }
-    uploadValues.push(
-      result_configGetValues.resultValues[i * 2],
-      result_configGetValues.resultValues[i * 2 + 1],
-      "1576"
-    );
+    uploadValues.push(result_configGetValues.resultValues[i * 2], result_configGetValues.resultValues[i * 2 + 1], "1576");
     logHandler.logMessage("Upvalues1 " + uploadValues);
   }
   //--------------configUpdateValues-----------------
@@ -2961,26 +2709,16 @@ function cffcStorageLoad(stationNumber, carrierNumber) {
     );
     var return_value = result_shipGetSerialNumberDataForShippingLot.return_value;
     if (return_value != 0) {
-      return generateError(
-        result_shipGetSerialNumberDataForShippingLot.return_value,
-        "shipGetSerialNumberDataForShippingLot"
-      );
+      return generateError(result_shipGetSerialNumberDataForShippingLot.return_value, "shipGetSerialNumberDataForShippingLot");
     }
     var serialNumberList = result_shipGetSerialNumberDataForShippingLot.serialNumberResultValues;
     if (serialNumberList.length == 0) {
       return generateReturn(1, "Magazin ist nicht für diese Station vorgesehen");
     }
     var serialNumber = String(serialNumberList[0]);
-    var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(
-      imsApiSessionContext,
-      stationNumber,
-      serialNumber,
-      "-1",
-      0,
-      0,
-      0,
-      [ImsApiKey.STATION_NUMBER]
-    );
+    var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(imsApiSessionContext, stationNumber, serialNumber, "-1", 0, 0, 0, [
+      ImsApiKey.STATION_NUMBER,
+    ]);
     if (result_trGetNextProductionStep.return_value !== 0) {
       return generateError(result_trGetNextProductionStep.return_value, "trGetNextProductionStep");
     }
@@ -3091,12 +2829,9 @@ function cffcStorageLoadConfirmation(stationNumber, magazineNumber, position, lo
       return generateError(result_mlUpdateStorage.return_value, "mlUpdateStorage");
     }
 
-    var result_shipGetChildLotsForParentLot = imsApiService.shipGetChildLotsForParentLot(
-      imsApiSessionContext,
-      stationNumber,
-      magazineNumber,
-      [ImsApiKey.MATERIAL_BIN_NUMBER]
-    );
+    var result_shipGetChildLotsForParentLot = imsApiService.shipGetChildLotsForParentLot(imsApiSessionContext, stationNumber, magazineNumber, [
+      ImsApiKey.MATERIAL_BIN_NUMBER,
+    ]);
     if (result_shipGetChildLotsForParentLot.return_value !== 0) {
       return generateError(result_shipGetChildLotsForParentLot.return_value, "shipGetChildLotsForParentLot");
     }
@@ -3106,16 +2841,9 @@ function cffcStorageLoadConfirmation(stationNumber, magazineNumber, position, lo
 
     // TODO: some ambiguities in this implementation, verify with author
 
-    var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(
-      imsApiSessionContext,
-      stationNumber,
-      refSerialNumbers[0],
-      "-1",
-      0,
-      0,
-      1,
-      [ImsApiKey.WORKSTEP_AVO]
-    );
+    var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(imsApiSessionContext, stationNumber, refSerialNumbers[0], "-1", 0, 0, 1, [
+      ImsApiKey.WORKSTEP_AVO,
+    ]);
     if (result_trGetNextProductionStep.return_value !== 0) {
       return generateError(result_trGetNextProductionStep.return_value, "trGetNextProductionStep");
     }
@@ -3203,12 +2931,9 @@ function cffcStorageUnloadConfirmation(stationNumber, magazineNumber, slotId, un
       return generateError(errodCode, "mlUpdateStorage");
     }
 
-    var result_shipGetChildLotsForParentLot = imsApiService.shipGetChildLotsForParentLot(
-      imsApiSessionContext,
-      stationNumber,
-      magazineNumber,
-      [ImsApiKey.MATERIAL_BIN_NUMBER]
-    );
+    var result_shipGetChildLotsForParentLot = imsApiService.shipGetChildLotsForParentLot(imsApiSessionContext, stationNumber, magazineNumber, [
+      ImsApiKey.MATERIAL_BIN_NUMBER,
+    ]);
     if (result_shipGetChildLotsForParentLot.return_value !== 0) {
       return generateError(result_shipGetChildLotsForParentLot.return_value, "shipGetChildLotsForParentLot");
     }
@@ -3305,13 +3030,9 @@ function cffcUnloadChamberConfirmation(stationNumber, serialNumber, position, un
       return generateError(errodCode, "mlUpdateStorage");
     }
 
-    var result_trGetSerialNumberInfo = imsApiService.trGetSerialNumberInfo(
-      imsApiSessionContext,
-      stationNumber,
-      serialNumber,
-      "-1",
-      [ImsApiKey.WORKORDER_NUMBER]
-    );
+    var result_trGetSerialNumberInfo = imsApiService.trGetSerialNumberInfo(imsApiSessionContext, stationNumber, serialNumber, "-1", [
+      ImsApiKey.WORKORDER_NUMBER,
+    ]);
     // WA work order (TR booking)
     if (result_mlSetMaterialBinLocation.return_value !== 0) {
       return generateError(result_trGetSerialNumberInfo.return_value, "trGetSerialNumberInfo");
@@ -3324,16 +3045,9 @@ function cffcUnloadChamberConfirmation(stationNumber, serialNumber, position, un
       return generateReturn(20, "Kalibrierplatte muss entnommen werden");
     }
 
-    var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(
-      imsApiSessionContext,
-      stationNumber,
-      serialNumber,
-      "-1",
-      0,
-      0,
-      1,
-      [ImsApiKey.WORKSTEP_AVO]
-    );
+    var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(imsApiSessionContext, stationNumber, serialNumber, "-1", 0, 0, 1, [
+      ImsApiKey.WORKSTEP_AVO,
+    ]);
     if (result_trGetNextProductionStep.return_value !== 0) {
       return generateError(result_trGetNextProductionStep.return_value, "trGetSerialNumberUploadInfo");
     }
@@ -3425,14 +3139,7 @@ function cffcUnloadChamberConfirmation(stationNumber, serialNumber, position, un
  * @param userID - userID
  * @returns {Result_customFunctionCommon}
  */
-function cffcUploadMachineConditionOrMessages(
-  stationNumber,
-  timeStampMachineCondition,
-  timeStampMachineMessage,
-  machineCondition,
-  machineMessage,
-  userID
-) {
+function cffcUploadMachineConditionOrMessages(stationNumber, timeStampMachineCondition, timeStampMachineMessage, machineCondition, machineMessage, userID) {
   if (!stationNumber) {
     // eslint-disable-next-line no-magic-numbers
     return generateReturn(-1001, "Fehlerhafte Daten an das MES übertragen");
@@ -3529,9 +3236,7 @@ function cfffUploadProcessData() {
     var numberOfKeys = 3; // measure name, measure value and unit
 
     for (var i = 0; i < data.length / numberOfKeys; i++) {
-      processData.push(
-        new Measure(data[i * numberOfKeys], "", data[i * numberOfKeys + 1], "", "", "", data[i * numberOfKeys + 2])
-      );
+      processData.push(new Measure(data[i * numberOfKeys], "", data[i * numberOfKeys + 1], "", "", "", data[i * numberOfKeys + 2]));
     }
     logHandler.logMessage("+++++++++");
     logHandler.logMessage(processData);
@@ -3547,23 +3252,11 @@ function cfffUploadProcessData() {
     var workOrderNumber = "-1";
     var bookDate = -1;
     var serialUnitTrace = 0;
-    var stationResultUploadKeys = [
-      ImsApiKey.ERROR_CODE,
-      ImsApiKey.MEASURE_FAIL_CODE,
-      ImsApiKey.MEASURE_NAME,
-      ImsApiKey.MEASURE_VALUE,
-      ImsApiKey.UNIT,
-    ];
+    var stationResultUploadKeys = [ImsApiKey.ERROR_CODE, ImsApiKey.MEASURE_FAIL_CODE, ImsApiKey.MEASURE_NAME, ImsApiKey.MEASURE_VALUE, ImsApiKey.UNIT];
     var stationResultUploadValues = [];
 
     for (var i = 0; i < processData.length; i++) {
-      stationResultUploadValues.push(
-        0,
-        0,
-        processData[i].MEASURE_NAME,
-        processData[i].MEASURE_VALUE,
-        processData[i].MEASURE_UNIT
-      );
+      stationResultUploadValues.push(0, 0, processData[i].MEASURE_NAME, processData[i].MEASURE_VALUE, processData[i].MEASURE_UNIT);
     }
 
     var result_trUploadStationResult = imsApiService.trUploadStationResult(
@@ -3685,10 +3378,7 @@ function cffcWayDecision(stationNumber, serialNumber) {
     var resultValues = result_configGetValues.resultValues;
     for (var i = 0; i < result_configGetValues.resultValues.length / 2; i++) {
       for (var j = 0; j < result_trGetNextProductionStep.productionStepResultValues.length / 2; j++) {
-        if (
-          result_configGetValues.resultValues[i * 2] ==
-          result_trGetNextProductionStep.productionStepResultValues[2 * j + 1]
-        ) {
+        if (result_configGetValues.resultValues[i * 2] == result_trGetNextProductionStep.productionStepResultValues[2 * j + 1]) {
           var val = result_configGetValues.resultValues[i * 2 + 1].split("|");
           if (val[3] == 0) {
             // Station available
@@ -4064,13 +3754,9 @@ function cffcHandleIST(stationNumber, serialNumber) {
     var remainingPlates = results.outArgs[8];
     var results = [slotID, processedPlates, remainingPlates];
     ///var results = [slotID, processedPlates, remainingPlates];
-    var result_trGetSerialNumberInfo = imsApiService.trGetSerialNumberInfo(
-      imsApiSessionContext,
-      stationNumber,
-      serialNumber,
-      "-1",
-      [ImsApiKey.WORKORDER_NUMBER]
-    );
+    var result_trGetSerialNumberInfo = imsApiService.trGetSerialNumberInfo(imsApiSessionContext, stationNumber, serialNumber, "-1", [
+      ImsApiKey.WORKORDER_NUMBER,
+    ]);
     if (result_trGetSerialNumberInfo.return_value !== 0) {
       return generateError(result_mlUpdateStorage.return_value, "result_trGetSerialNumberInfo");
     }
@@ -4087,15 +3773,9 @@ function cffcHandleIST(stationNumber, serialNumber) {
       }
       return generateReturn(1, "forward plate to MiniLoader", results);
     }
-    var result_trGetSerialNumberUploadInfo = imsApiService.trGetSerialNumberUploadInfo(
-      imsApiSessionContext,
-      stationNumber,
-      -1,
-      serialNumber,
-      "-1",
-      0,
-      [ImsApiKey.STATION_NUMBER]
-    );
+    var result_trGetSerialNumberUploadInfo = imsApiService.trGetSerialNumberUploadInfo(imsApiSessionContext, stationNumber, -1, serialNumber, "-1", 0, [
+      ImsApiKey.STATION_NUMBER,
+    ]);
     if (result_trGetSerialNumberUploadInfo.return_value !== 0) {
       return generateError(result_trGetSerialNumberUploadInfo.return_value, "trGetSerialNumberUploadInfo");
     }
